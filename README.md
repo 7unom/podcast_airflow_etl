@@ -8,11 +8,19 @@ The use of Airflow to do this project will help with a few things:
 * We can easily parallelize tasks and run in the cloud if we want to.
 * We can extend this project more easily (add speech recognition, summaries, etc) using Airflow.
 
+## About Market Place
+
+Marketplace is a public media outlet that produces broadcast shows, podcasts, digital reporting and more.
+It will serve as a source for the data used in this project.
+
 **Project Steps**
 
 * Download the podcast metadata xml and parse
 * Create a `SQLite` database to hold podcast metadata
 * Download the podcast audio files using requests
+
+![Your Image](podcast_etl.png)
+
 
 # Local Setup
 
