@@ -17,6 +17,8 @@ It will serve as a source for the data used in this project.
 
 * Download the podcast metadata xml and parse
 * Create a `SQLite` database to hold podcast metadata
+* Transform the parsed metadata into a suitable Schema
+* Load the transformed data in the database
 * Download the podcast audio files using requests
 
 ![Your Image](podcast_etl.png)
@@ -29,12 +31,13 @@ It will serve as a source for the data used in this project.
 To carry out this project, the following were downloaded and used locally:
 
 * Apache Airflow 2.7.0
-* Python 3.11.0
+* Python 3.11.4
 * Python packages
     * pandas
     * sqlite3
     * xmltodict
     * requests
+    * datetime 
 
 ## Data
 

@@ -5,7 +5,7 @@ import pendulum
 import requests
 import xmltodict
 import os
-
+from datetime import datetime
 
 PODCAST_URL = "https://www.marketplace.org/feed/podcast/marketplace/"
 
@@ -27,13 +27,15 @@ def podcast_summary():
         CREATE TABLE IF NOT EXISTS episodes(
         link TEXT PRIMARY KEY,
         title TEXT,
-        published  TEXT,
+        pubDate  DATE,
+        pubTime TIME,
         description TEXT,
-        filename TEXT
-        )""",
+        filename TEXT)
+        """,
         
         sqlite_conn_id='podcasts' # tells airflow which connection to use to run the code
     )
+     # This will tell airflow to create database before running `get_episodes()`
     
 
     # Task function to get podcast episodes from the feed
@@ -51,21 +53,49 @@ def podcast_summary():
     # Set task dependencies: create_database -> get_episodes
     create_database.set_downstream(podcast_episodes) # This will tell airflow to create database before running `get_episodes()`
 
+    @task
+    def transform(episodes):
+        transformed_episodes = []
+        for episode in episodes:
+            link = episode.get('link')
+            title = episode.get('title')
+            published = episode.get('pubDate')
+            description = episode.get('description')
+        
+            pub_object = datetime.strptime(published[:-6], "%a, %d %b %Y %H:%M:%S")
+            pubDate = pub_object.strftime( "%Y-%m-%d")
+            pubTime = pub_object.strftime("%H:%M:%S")
+            cleaned_description = description.replace('<p>', '').replace('</p>', '').strip()
+            description_string = ' '.join(cleaned_description)
+            return link, title, pubDate, pubTime, cleaned_description
+        transformed_episodes.append({
+            "link": link,
+            'title': title,
+            'pubDate': pubDate,
+            'pubTime': pubTime,
+            'description': description_string
+        })
+        return transformed_episodes
+    
+    transformed_podcast = transform(podcast_episodes)
+
+
     # Task function to load new episodes into the SQLite database
     @task()
-    def load_episodes(episodes):
+    def load_episodes(transformed_episodes):
         hook = SqliteHook(sqlite_conn_id='podcasts')
         stored_episodes = hook.get_pandas_df('SELECT * FROM episodes')
         new_episodes = []
-        for episode in episodes:
-            if episode["link"] not in stored_episodes["link"].values:
-                filename = f"{episode['link'].split('/')[-1]}.mp3"
-                new_episodes.append([episode["link"], episode["title"], episode["pubDate"], episode["description"], filename])
+        for episode in transformed_episodes:
+            link = episode[0]
+            if link not in stored_episodes['link'].values:
+                filename = f"{link.split('/')[-1]}.mp3"
+                new_episodes.append([link, episode[1], episode[2], episode[3], episode[4], filename])
 
-        hook.insert_rows(table='episodes', rows=new_episodes, target_fields=['link','title', 'published', 'description', 'filename'])
+        hook.insert_rows(table='episodes', rows=new_episodes, target_fields=['link','title', 'pubDate', 'pubTime','description', 'filename'])
 
     # Load new episodes into the database
-    load_episodes(podcast_episodes)
+    load_episodes(transformed_podcast)
 
     # Task function to download podcast episodes
     @task()
