@@ -7,8 +7,6 @@ import xmltodict
 import os
 from datetime import datetime
 
-PODCAST_URL = "https://www.marketplace.org/feed/podcast/marketplace/"
-
 
 # Define the DAG with appropriate metadata
 @dag(
